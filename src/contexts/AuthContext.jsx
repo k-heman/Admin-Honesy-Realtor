@@ -2,16 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   signOut,
   onAuthStateChanged,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
+  signInWithEmailAndPassword,
 } from 'firebase/auth';
 import {
-  doc,
-  getDoc,
   collection,
   query,
   where,
   getDocs,
+  doc,
   updateDoc,
   setDoc,
   serverTimestamp,
@@ -20,158 +18,115 @@ import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext();
 
+// The single allowed admin email — only this account can access the panel
+const ALLOWED_ADMIN_EMAIL = 'honestyrealtor@gmail.com';
+
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState({ uid: 'open-admin-uid', phoneNumber: '+910000000000' });
-  const [adminData, setAdminData] = useState({
-    name: 'Open Admin',
-    mobileNumber: '+910000000000',
-    role: 'Super Admin',
-    active: true,
-  });
-  const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [adminData, setAdminData] = useState(null);
+  const [loading, setLoading] = useState(true);      // true until onAuthStateChanged fires first time
+  const [adminReady, setAdminReady] = useState(false); // true once adminData attempt is complete
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
-  // Setup reCAPTCHA for phone login
-  const setupRecaptcha = (elementId) => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
-        size: 'invisible',
-        callback: () => {},
-      });
-    }
-    return window.recaptchaVerifier;
-  };
-
-  // Login with phone number - step 1
-  const loginWithPhone = async (phoneNumber, elementId) => {
+  // ----- Email / Password Login -----
+  const loginWithEmail = async (email, password) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const appVerifier = setupRecaptcha(elementId);
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      window.confirmationResult = confirmationResult;
-      return confirmationResult;
-    } catch (err) {
-      setAuthError(err.message);
-      // Reset recaptcha on failure
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
+      // Client-side whitelist check before hitting Firebase
+      if (email.trim().toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
+        throw new Error('Unauthorized Access: This email is not registered as an admin.');
       }
-      throw err;
+
+      const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const user = result.user;
+
+      // Optimistically set currentUser so ProtectedRoute knows we're logged in
+      setCurrentUser(user);
+
+      // Fetch/create admin record in Firestore
+      const adminInfo = await upsertAdminRecord(user);
+
+      // Set both adminData and adminReady together so ProtectedRoute
+      // never sees currentUser=set + adminData=null (the "unauthorized" trap)
+      setAdminData(adminInfo);
+      setAdminReady(true);
+
+      return result;
+    } catch (err) {
+      const msg = mapFirebaseError(err);
+      setAuthError(msg);
+      // Reset on error so ProtectedRoute doesn't get stuck
+      setCurrentUser(null);
+      setAdminData(null);
+      setAdminReady(true);
+      throw new Error(msg);
     } finally {
       setAuthLoading(false);
     }
   };
 
-  // Login with phone - step 2 (verify OTP)
-  const verifyOTP = async (otp) => {
-    setAuthLoading(true);
-    setAuthError(null);
+  // ----- Upsert admin record in Firestore -----
+  const upsertAdminRecord = async (user) => {
     try {
-      const result = await window.confirmationResult.confirm(otp);
-      const user = result.user;
-
-      if (!user.phoneNumber) {
-        await signOut(auth);
-        throw new Error('Access denied. A valid mobile number is required.');
-      }
-
-      const ALLOWED_NUMBERS = ['+918074411454', '+918523802251'];
-      if (!ALLOWED_NUMBERS.includes(user.phoneNumber)) {
-        await signOut(auth);
-        throw new Error('Unauthorized Access');
-      }
-
-      // Query admins collection: Verify mobileNumber matches and active = true
       const q = query(
         collection(db, 'admins'),
-        where('mobileNumber', '==', user.phoneNumber),
+        where('email', '==', user.email),
         where('active', '==', true)
       );
       const querySnapshot = await getDocs(q);
 
-      let adminInfo = null;
       if (querySnapshot.empty) {
-        // Auto-create in firestore so they appear in the user list!
-        try {
-          const newAdminRef = doc(collection(db, 'admins'));
-          const newAdminData = {
-            name: user.phoneNumber === '+918074411454' ? 'Admin 1' : 'Admin 2',
-            mobileNumber: user.phoneNumber,
-            role: 'Super Admin',
-            active: true,
-            status: 'active',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            lastLogin: serverTimestamp(),
-          };
-          await setDoc(newAdminRef, newAdminData);
-          adminInfo = { id: newAdminRef.id, ...newAdminData, lastLogin: new Date() };
-        } catch (dbErr) {
-          console.error("Error auto-creating admin doc: ", dbErr);
-          // If firestore write fails, fallback to local object so login still succeeds
-          adminInfo = {
-            name: user.phoneNumber === '+918074411454' ? 'Admin 1' : 'Admin 2',
-            mobileNumber: user.phoneNumber,
-            role: 'Super Admin',
-            active: true,
-            status: 'active',
-            lastLogin: new Date(),
-          };
-        }
+        // Auto-create admin document on first login
+        const newAdminRef = doc(collection(db, 'admins'));
+        const newAdminData = {
+          name: 'Honesty Realtors Admin',
+          email: user.email,
+          role: 'Super Admin',
+          active: true,
+          status: 'active',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+        };
+        await setDoc(newAdminRef, newAdminData);
+        return { id: newAdminRef.id, ...newAdminData, lastLogin: new Date() };
       } else {
         const adminDoc = querySnapshot.docs[0];
         const adminDocRef = doc(db, 'admins', adminDoc.id);
-
-        // Update lastLogin in Firestore
-        await updateDoc(adminDocRef, {
-          lastLogin: serverTimestamp(),
-        });
-
-        const data = adminDoc.data();
-        adminInfo = { id: adminDoc.id, ...data, lastLogin: new Date() };
+        await updateDoc(adminDocRef, { lastLogin: serverTimestamp() });
+        return { id: adminDoc.id, ...adminDoc.data(), lastLogin: new Date() };
       }
-
-      setAdminData(adminInfo);
-      return result;
-    } catch (err) {
-      let friendlyMessage = err.message;
-      if (err.message.includes('auth/invalid-verification-code') || err.message.includes('invalid-credential')) {
-        friendlyMessage = 'Invalid OTP. Please check the code and try again.';
-      } else if (err.message === 'Unauthorized Access') {
-        friendlyMessage = 'Unauthorized Access';
-      }
-      setAuthError(friendlyMessage);
-      throw new Error(friendlyMessage);
-    } finally {
-      setAuthLoading(false);
+    } catch (dbErr) {
+      console.error('Firestore admin upsert error:', dbErr);
+      // Fallback so login still works even if Firestore is unavailable
+      return {
+        name: 'Honesty Realtors Admin',
+        email: user.email,
+        role: 'Super Admin',
+        active: true,
+        lastLogin: new Date(),
+      };
     }
   };
 
-  // Logout
-  const logout = async () => {
-    await signOut(auth);
-    setAdminData(null);
-    setCurrentUser(null);
-  };
-
-  // Fetch admin data by querying mobileNumber
+  // ----- Fetch admin data on auth state change (page refresh / persisted session) -----
   const fetchAdminData = async (user) => {
-    if (!user || !user.phoneNumber) {
+    if (!user || !user.email) {
       setAdminData(null);
       return;
     }
-    const ALLOWED_NUMBERS = ['+918074411454', '+918523802251'];
-    if (!ALLOWED_NUMBERS.includes(user.phoneNumber)) {
+    if (user.email.toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
+      // Email not whitelisted — sign them out silently
+      await signOut(auth);
       setAdminData(null);
       return;
     }
     try {
       const q = query(
         collection(db, 'admins'),
-        where('mobileNumber', '==', user.phoneNumber),
+        where('email', '==', user.email),
         where('active', '==', true)
       );
       const querySnapshot = await getDocs(q);
@@ -180,52 +135,83 @@ export function AuthProvider({ children }) {
         const adminDoc = querySnapshot.docs[0];
         setAdminData({ id: adminDoc.id, ...adminDoc.data() });
       } else {
-        // Fallback admin data
+        // Fallback: admin is authenticated but no Firestore doc yet
         setAdminData({
-          name: user.phoneNumber === '+918074411454' ? 'Admin 1' : 'Admin 2',
-          mobileNumber: user.phoneNumber,
+          name: 'Honesty Realtors Admin',
+          email: user.email,
           active: true,
-          role: 'Super Admin'
+          role: 'Super Admin',
         });
       }
     } catch (err) {
       console.error('Error fetching admin data on auth change:', err);
-      // Fallback admin data
       setAdminData({
-        name: user.phoneNumber === '+918074411454' ? 'Admin 1' : 'Admin 2',
-        mobileNumber: user.phoneNumber,
+        name: 'Honesty Realtors Admin',
+        email: user.email,
         active: true,
-        role: 'Super Admin'
+        role: 'Super Admin',
       });
     }
   };
 
+  // ----- Auth State Listener -----
+  // Handles page refresh / persisted Firebase sessions
   useEffect(() => {
-    // Authentication is bypassed. Admin panel is open directly.
-    setLoading(false);
-    /*
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setAdminReady(false); // reset while we resolve admin data
+
       if (user) {
         await fetchAdminData(user);
       } else {
         setAdminData(null);
       }
+
+      setAdminReady(true); // done resolving (success or no-user)
       setLoading(false);
     });
     return unsubscribe;
-    */
   }, []);
+
+  // ----- Logout -----
+  const logout = async () => {
+    await signOut(auth);
+    setAdminData(null);
+    setCurrentUser(null);
+    setAdminReady(true);
+  };
+
+  // ----- Map Firebase error codes to user-friendly messages -----
+  const mapFirebaseError = (err) => {
+    const code = err?.code || '';
+    if (
+      code === 'auth/wrong-password' ||
+      code === 'auth/invalid-credential' ||
+      code === 'auth/invalid-email'
+    ) {
+      return 'Invalid email or password. Please try again.';
+    }
+    if (code === 'auth/user-not-found') {
+      return 'No admin account found with this email.';
+    }
+    if (code === 'auth/too-many-requests') {
+      return 'Too many failed attempts. Please wait a moment and try again.';
+    }
+    if (code === 'auth/user-disabled') {
+      return 'This admin account has been disabled.';
+    }
+    return err.message || 'Login failed. Please try again.';
+  };
 
   const value = {
     currentUser,
     adminData,
     loading,
+    adminReady,
     authLoading,
     authError,
     setAuthError,
-    loginWithPhone,
-    verifyOTP,
+    loginWithEmail,
     logout,
     isAdmin: adminData?.active === true,
     role: adminData?.role || 'Admin',

@@ -17,6 +17,32 @@ import {
 import { db } from '../firebase/config';
 
 // ─────────────────────────────────────────────
+// Config sync helpers
+// ─────────────────────────────────────────────
+
+/**
+ * Reads all active locations from the `locations` collection and writes
+ * the names array into the `config/filters` document so the main website
+ * filter dropdown stays in sync.
+ */
+export const syncLocationsToConfig = async () => {
+  try {
+    const snap = await getDocs(collection(db, 'locations'));
+    const locationNames = [
+      'All Locations',
+      ...snap.docs
+        .map((d) => d.data())
+        .filter((loc) => loc.status !== 'inactive' && loc.locationName)
+        .map((loc) => loc.locationName),
+    ];
+    const configRef = doc(db, 'config', 'filters');
+    await setDoc(configRef, { locations: locationNames }, { merge: true });
+  } catch (err) {
+    console.warn('syncLocationsToConfig failed:', err);
+  }
+};
+
+// ─────────────────────────────────────────────
 // Generic CRUD helpers
 // ─────────────────────────────────────────────
 
@@ -90,9 +116,19 @@ export const categoriesService = {
 // Locations
 export const locationsService = {
   getAll: () => getCollection('locations'),
-  create: (data) => addDocument('locations', data),
-  update: (id, data) => updateDocument('locations', id, data),
-  delete: (id) => deleteDocument('locations', id),
+  create: async (data) => {
+    const id = await addDocument('locations', data);
+    await syncLocationsToConfig();
+    return id;
+  },
+  update: async (id, data) => {
+    await updateDocument('locations', id, data);
+    await syncLocationsToConfig();
+  },
+  delete: async (id) => {
+    await deleteDocument('locations', id);
+    await syncLocationsToConfig();
+  },
 };
 
 // Enquiries
