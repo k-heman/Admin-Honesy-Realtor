@@ -404,7 +404,7 @@ function PropertiesList() {
               {viewProp.description && (
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>Description</div>
-                  <p style={{ color: '#64748b', lineHeight: 1.7 }}>{viewProp.description}</p>
+                  <div style={{ color: '#64748b', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: viewProp.description }} />
                 </div>
               )}
               {viewProp.amenities?.length > 0 && (

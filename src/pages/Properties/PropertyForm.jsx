@@ -4,6 +4,8 @@ import { uploadMultipleFiles } from '../../hooks/useStorage';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import { FiX, FiUpload, FiPlus } from 'react-icons/fi';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 const PROPERTY_TYPES = ['Flat', 'Independent House', 'Villa', 'Farm House', 'Plot'];
 const SUB_TYPES = {
@@ -15,14 +17,13 @@ const SUB_TYPES = {
 };
 const BHK_OPTIONS = ['1BHK', '2BHK', '3BHK', '4BHK', '5BHK', 'N/A'];
 const FURNISHING = ['Furnished', 'Semi-Furnished', 'Unfurnished'];
-const AMENITIES = ['Swimming Pool', 'Gym', 'Parking', 'Security', 'Club House', 'Garden', 'Power Backup', 'Lift'];
 const STATUS_OPTIONS = ['available', 'sold', 'rented'];
 
 const defaultForm = {
   title: '', description: '', type: 'Flat', subType: '', bhk: '2BHK',
   furnishing: 'Unfurnished', location: '', price: '', priceValue: '',
   area: '', bedrooms: '', bathrooms: '', parking: '', status: 'available',
-  isFeatured: false, isNew: false, amenities: [], images: [], tags: [],
+  isFeatured: false, isNew: false, amenities: '', images: [], tags: [],
 };
 
 function TagsInput({ tags, onChange }) {
@@ -135,7 +136,7 @@ function PropertyForm({ property, onClose, onSuccess }) {
     ...defaultForm,
     ...property,
     images: property.images || (property.image ? [property.image] : []),
-    amenities: property.amenities || [],
+    amenities: Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities || '',
     tags: property.tags || [],
   } : defaultForm);
   const [newFiles, setNewFiles] = useState([]);
@@ -147,15 +148,6 @@ function PropertyForm({ property, onClose, onSuccess }) {
   const set = (field, val) => {
     setForm(prev => ({ ...prev, [field]: val }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
-  };
-
-  const toggleAmenity = (amenity) => {
-    setForm(prev => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter(a => a !== amenity)
-        : [...prev.amenities, amenity],
-    }));
   };
 
   const validate = () => {
@@ -192,6 +184,7 @@ function PropertyForm({ property, onClose, onSuccess }) {
         bedrooms: Number(form.bedrooms) || 0,
         bathrooms: Number(form.bathrooms) || 0,
         parking: Number(form.parking) || 0,
+        amenities: typeof form.amenities === 'string' ? form.amenities.split(',').map(a => a.trim()).filter(Boolean) : form.amenities,
       };
 
       if (isEdit) {
@@ -259,7 +252,9 @@ function PropertyForm({ property, onClose, onSuccess }) {
 
             <div className="form-group">
               <label className="form-label">Description</label>
-              <textarea className="form-control" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the property in detail..." rows={4} />
+              <div style={{ backgroundColor: 'white' }}>
+                <ReactQuill theme="snow" value={form.description} onChange={val => set('description', val)} placeholder="Describe the property in detail..." />
+              </div>
             </div>
           </div>
         </div>
@@ -332,13 +327,9 @@ function PropertyForm({ property, onClose, onSuccess }) {
         {/* Amenities */}
         <div>
           <div className="settings-section-title">Amenities</div>
-          <div className="checkbox-group">
-            {AMENITIES.map(a => (
-              <label key={a} className="checkbox-item">
-                <input type="checkbox" checked={form.amenities.includes(a)} onChange={() => toggleAmenity(a)} />
-                {a}
-              </label>
-            ))}
+          <div className="form-group">
+            <label className="form-label">Comma-Separated Amenities</label>
+            <input className="form-control" value={form.amenities} onChange={e => set('amenities', e.target.value)} placeholder="e.g. Swimming Pool, Lift, Power Backup" />
           </div>
         </div>
 
