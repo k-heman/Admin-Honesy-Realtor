@@ -138,6 +138,12 @@ export const enquiriesService = {
   delete: (id) => deleteDocument('enquiries', id),
 };
 
+// Site Visits
+export const siteVisitsService = {
+  getAll: () => getCollection('site_visits'),
+  delete: (id) => deleteDocument('site_visits', id),
+};
+
 // Testimonials
 export const testimonialsService = {
   getAll: () => getCollection('testimonials'),

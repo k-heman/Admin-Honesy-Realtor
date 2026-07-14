@@ -24,6 +24,7 @@ const defaultForm = {
   furnishing: 'Unfurnished', location: '', price: '', priceValue: '',
   area: '', bedrooms: '', bathrooms: '', parking: '', status: 'available',
   isFeatured: false, isNew: false, amenities: '', images: [], tags: [],
+  youtubeLink: '',
 };
 
 function TagsInput({ tags, onChange }) {
@@ -138,6 +139,7 @@ function PropertyForm({ property, onClose, onSuccess }) {
     images: property.images || (property.image ? [property.image] : []),
     amenities: Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities || '',
     tags: property.tags || [],
+    youtubeLink: property.youtubeLink || '',
   } : defaultForm);
   const [newFiles, setNewFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -343,9 +345,21 @@ function PropertyForm({ property, onClose, onSuccess }) {
           </div>
         </div>
 
-        {/* Images */}
+        {/* Media & Images */}
         <div>
-          <div className="settings-section-title">Property Images</div>
+          <div className="settings-section-title">Media & Images</div>
+          
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label className="form-label">YouTube Video URL</label>
+            <input 
+              className="form-control" 
+              type="url"
+              value={form.youtubeLink} 
+              onChange={e => set('youtubeLink', e.target.value)} 
+              placeholder="e.g. https://www.youtube.com/watch?v=..." 
+            />
+          </div>
+
           <ImageUpload
             images={newFiles}
             existingUrls={form.images}

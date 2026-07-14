@@ -1,39 +1,11 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-function ProtectedRoute({ children }) {
-  const { currentUser, adminData, loading, adminReady } = useAuth();
-
-  // 1. Still doing the initial Firebase auth check — show spinner
-  if (loading) {
-    return <LoadingSpinner label="Loading admin panel..." />;
-  }
-
-  // 2. currentUser is set but adminData hasn't resolved yet — show spinner
-  //    (avoids the race condition that caused the /unauthorized bounce)
-  if (currentUser && !adminReady) {
-    return <LoadingSpinner label="Verifying admin access..." />;
-  }
-
-  // 3. No authenticated user → go to login
-  if (!currentUser) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // 4. User is authenticated but NOT an admin → unauthorized
-  if (!adminData) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  // 5. All good — render the dashboard
-  return children;
-}
-
 function LoadingSpinner({ label }) {
   return (
     <div
       className="flex-center"
-      style={{ minHeight: '100vh', flexDirection: 'column', gap: 16 }}
+      style={{ minHeight: '100vh', flexDirection: 'column', gap: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       <div
         style={{
@@ -49,6 +21,20 @@ function LoadingSpinner({ label }) {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
+}
+
+function ProtectedRoute({ children }) {
+  const { currentUser, loading, adminReady, isAdmin } = useAuth();
+  
+  if (loading || !adminReady) {
+    return <LoadingSpinner label="Checking Authentication..." />;
+  }
+
+  if (!currentUser || !isAdmin) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return children;
 }
 
 export default ProtectedRoute;

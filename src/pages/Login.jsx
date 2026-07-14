@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import logo from '../assets/honestyrealtorlogo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { FiMail, FiLock, FiArrowRight, FiAlertCircle, FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase/config';
 
 function Login() {
   const { currentUser, adminReady, loginWithEmail, authLoading } = useAuth();
@@ -11,12 +14,42 @@ function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   // ✅ Only redirect when BOTH currentUser AND adminData are confirmed ready
   // This prevents the race-condition bounce through /unauthorized
   if (currentUser && adminReady) {
     return <Navigate to="/" replace />;
   }
+
+  const handleForgotPassword = async () => {
+    setFormError('');
+    if (!email.trim()) {
+      setFormError('Please enter your registered email address.');
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      toast.success(
+        'Password reset email sent successfully.\nPlease check your inbox.\nAlso check Spam/Junk folder if you don\'t see it.',
+        { duration: 6000 }
+      );
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        setFormError('No admin account exists with this email.');
+      } else if (err.code === 'auth/invalid-email') {
+        setFormError('Please enter a valid email address.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setFormError('Too many attempts. Please try again later.');
+      } else {
+        setFormError('Unable to send password reset email. Please try again.');
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -54,16 +87,16 @@ function Login() {
         <div className="login-card">
           {/* Logo */}
           <div className="login-logo">
-            <div className="login-logo__icon">HR</div>
+            <img src={logo} alt="Honesty Realtors Logo" style={{ width: 48, height: 48, objectFit: 'contain' }} />
             <div>
               <h1>Honesty Realtors</h1>
               <p>Admin Dashboard</p>
             </div>
           </div>
 
-          <h2 className="login-title">Admin Login</h2>
+          <h2 className="login-title">Welcome Back</h2>
           <p className="login-subtitle">
-            Sign in with your admin credentials to continue
+            Login to continue managing your properties.
           </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -148,12 +181,22 @@ function Login() {
               style={{ marginTop: 4 }}
             >
               {authLoading ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="spin-sm" /> Signing in...
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <span className="spin-sm" /> Checking Authentication...
                 </span>
               ) : (
-                <><FiArrowRight /> Sign In</>
+                <><FiArrowRight /> Login</>
               )}
+            </button>
+
+            <button 
+              type="button" 
+              className="btn btn-ghost w-full" 
+              style={{ marginTop: -8, color: '#6366f1' }}
+              onClick={handleForgotPassword}
+              disabled={authLoading || resetLoading}
+            >
+              {resetLoading ? 'Sending...' : 'Forgot Password?'}
             </button>
           </form>
 

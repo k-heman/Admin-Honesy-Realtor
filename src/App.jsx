@@ -13,6 +13,7 @@ import PropertiesList from './pages/Properties/PropertiesList';
 import CategoriesList from './pages/Categories/CategoriesList';
 import LocationsList from './pages/Locations/LocationsList';
 import EnquiriesList from './pages/Enquiries/EnquiriesList';
+import SiteVisitsList from './pages/SiteVisits/SiteVisitsList';
 import TestimonialsList from './pages/Testimonials/TestimonialsList';
 import BannersList from './pages/Banners/BannersList';
 import UsersList from './pages/Users/UsersList';
@@ -24,9 +25,8 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Public */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+          {/* Public / Auth routes */}
+          <Route path="/admin/login" element={<Login />} />
 
           {/* Protected Dashboard */}
           <Route
@@ -42,6 +42,7 @@ function App() {
             <Route path="categories" element={<CategoriesList />} />
             <Route path="locations" element={<LocationsList />} />
             <Route path="enquiries" element={<EnquiriesList />} />
+            <Route path="site-visits" element={<SiteVisitsList />} />
             <Route path="testimonials" element={<TestimonialsList />} />
             <Route path="banners" element={<BannersList />} />
             <Route path="users" element={<UsersList />} />

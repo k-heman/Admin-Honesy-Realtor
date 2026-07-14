@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { enquiriesService } from '../../services/firestoreService';
-import { formatDate, formatDateTime, getStatusColor } from '../../utils/formatters';
+import { siteVisitsService } from '../../services/firestoreService';
+import { formatDate, formatDateTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
-import { FiSearch, FiTrash2, FiMessageSquare, FiHome, FiMail, FiPhone, FiCalendar } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiHome, FiMail, FiPhone, FiCalendar, FiClock, FiMapPin, FiDollarSign } from 'react-icons/fi';
 
-const STATUSES = ['Pending', 'Contacted', 'Interested', 'Closed'];
 const PAGE_SIZE = 10;
 
 function ConfirmDialog({ title, message, onConfirm, onCancel, loading }) {
@@ -27,23 +26,19 @@ function ConfirmDialog({ title, message, onConfirm, onCancel, loading }) {
   );
 }
 
-function EnquiriesList() {
-  const [enquiries, setEnquiries] = useState([]);
+function SiteVisitsList() {
+  const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
-  const [viewEnq, setViewEnq] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [editStatus, setEditStatus] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [selectedVisit, setSelectedVisit] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      let data = await enquiriesService.getAll();
+      const data = await siteVisitsService.getAll();
       
       // Sort by newest first
       data.sort((a, b) => {
@@ -51,42 +46,24 @@ function EnquiriesList() {
         const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt).getTime();
         return dateB - dateA;
       });
-      
-      setEnquiries(data);
+
+      setVisits(data);
     } catch (err) {
-      toast.error('Failed to load enquiries');
+      toast.error('Failed to load site visits');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
-
-  const openView = (enq) => {
-    setViewEnq(enq);
-    setNotes(enq.notes || '');
-    setEditStatus(enq.status || 'Pending');
-  };
-
-  const handleSaveUpdate = async () => {
-    setSaving(true);
-    try {
-      await enquiriesService.update(viewEnq.id, { status: editStatus, notes });
-      toast.success('Enquiry updated successfully');
-      setViewEnq(null);
-      fetchData();
-    } catch {
-      toast.error('Update failed');
-    } finally {
-      setSaving(false);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
-      await enquiriesService.delete(deleteId);
-      toast.success('Enquiry deleted from database');
+      await siteVisitsService.delete(deleteId);
+      toast.success('Site visit record deleted');
       setDeleteId(null);
       fetchData();
     } catch {
@@ -96,38 +73,30 @@ function EnquiriesList() {
     }
   };
 
-  const filtered = enquiries.filter(e => {
+  const filtered = visits.filter(v => {
     const s = search.toLowerCase();
-    
-    // Normalize fields for older vs newer data schemas
-    const name = (e.fullName || e.customerName || '').toLowerCase();
-    const mobile = (e.mobileNumber || e.phone || '');
-    const email = (e.email || '').toLowerCase();
-    const propertyTitle = (e.property?.title || e.propertyTitle || '').toLowerCase();
-
-    const matchSearch = !s || 
-      name.includes(s) || 
-      mobile.includes(s) || 
-      email.includes(s) || 
-      propertyTitle.includes(s);
-    const matchStatus = !filterStatus || e.status === filterStatus;
-    return matchSearch && matchStatus;
+    const matchSearch = !s ||
+      (v.fullName || '').toLowerCase().includes(s) ||
+      (v.mobileNumber || '').includes(s) ||
+      (v.email || '').toLowerCase().includes(s) ||
+      (v.property?.title || '').toLowerCase().includes(s);
+    return matchSearch;
   });
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const getInitials = (name) => {
-    if (!name) return 'U';
+    if (!name) return 'SV';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
-    <div className="enquiries-container">
+    <div className="visits-container">
       <div className="page-header">
         <div className="page-header__left">
-          <h1>Enquiries</h1>
-          <p>{enquiries.filter(e => e.status === 'Pending').length} pending • {enquiries.length} total</p>
+          <h1>Site Visits</h1>
+          <p>{visits.length} scheduled visits total</p>
         </div>
       </div>
 
@@ -142,24 +111,6 @@ function EnquiriesList() {
                 onChange={e => { setSearch(e.target.value); setPage(1); }} 
               />
             </div>
-            <select 
-              className="filter-select" 
-              value={filterStatus} 
-              onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '10px',
-                border: '1.5px solid var(--border)',
-                outline: 'none',
-                background: 'white',
-                fontSize: '0.875rem',
-                minWidth: '150px',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="">All Statuses</option>
-              {STATUSES.map(s => <option key={s}>{s}</option>)}
-            </select>
           </div>
           <div className="table-toolbar__right">
             <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
@@ -176,9 +127,8 @@ function EnquiriesList() {
                 <th style={{ width: '4%' }}>#</th>
                 <th style={{ width: '18%' }}>Customer</th>
                 <th style={{ width: '18%' }}>Contact</th>
-                <th style={{ width: '22%' }}>Property</th>
-                <th style={{ width: '20%' }}>Message Preview</th>
-                <th style={{ width: '10%' }}>Status</th>
+                <th style={{ width: '25%' }}>Property Details</th>
+                <th style={{ width: '22%' }}>Preferred Appointment</th>
                 <th style={{ width: '8%' }}>Actions</th>
               </tr>
             </thead>
@@ -186,86 +136,89 @@ function EnquiriesList() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <td key={j}><div className="skeleton skeleton-text" style={{ margin: 0, height: 16 }} /></td>
                     ))}
                   </tr>
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <div className="table-empty">
-                      <div className="table-empty-icon">📭</div>
-                      <p style={{ fontWeight: 500, fontSize: '0.95rem' }}>No enquiries found</p>
+                      <div className="table-empty-icon">📅</div>
+                      <p style={{ fontWeight: 500, fontSize: '0.95rem' }}>No site visits found</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                paginated.map((enq, i) => {
-                  const name = enq.fullName || enq.customerName || '—';
-                  const mobile = enq.mobileNumber || enq.phone || '—';
-                  const propertyTitle = enq.property?.title || enq.propertyTitle || '—';
-                  
-                  return (
-                  <tr key={enq.id}>
-                    <td style={{ color: 'var(--text-tertiary)' }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
+                paginated.map((visit, i) => (
+                  <tr key={visit.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedVisit(visit)}>
+                    <td style={{ color: 'var(--text-tertiary)' }} onClick={e => e.stopPropagation()}>
+                      {(page - 1) * PAGE_SIZE + i + 1}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div className="avatar-circle">{getInitials(name !== '—' ? name : '')}</div>
+                        <div className="avatar-circle-visit">{getInitials(visit.fullName)}</div>
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{name}</div>
-                          <div style={{ fontStyle: 'normal', color: 'var(--text-tertiary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                            <FiCalendar size={12} /> {enq.createdAt ? formatDate(enq.createdAt) : '—'}
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{visit.fullName || '—'}</div>
+                          <div style={{ color: 'var(--text-tertiary)', fontSize: '0.73rem', marginTop: 2 }}>
+                            Submitted {visit?.createdAt ? formatDateTime(visit.createdAt) : formatDate(visit.createdAt)}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <a href={`tel:${mobile}`} style={{ color: 'var(--primary)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <FiPhone size={12} /> {mobile}
+                      <div style={{ fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: 2 }} onClick={e => e.stopPropagation()}>
+                        <a href={`tel:${visit.mobileNumber}`} style={{ color: 'var(--primary)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <FiPhone size={12} /> {visit.mobileNumber || '—'}
                         </a>
-                        <a href={`mailto:${enq.email}`} style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem' }}>
-                          <FiMail size={12} /> {enq.email || '—'}
+                        <a href={`mailto:${visit.email}`} style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem' }}>
+                          <FiMail size={12} /> {visit.email || '—'}
                         </a>
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '0.8125rem', fontStyle: 'normal', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }} title={propertyTitle}>
-                        <FiHome size={13} style={{ marginRight: 4, verticalAlign: 'text-bottom', color: 'var(--primary)' }} />
-                        {propertyTitle}
+                      {visit.property ? (
+                        <div style={{ fontSize: '0.8125rem' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }} title={visit.property.title}>
+                            <FiHome size={13} style={{ marginRight: 4, color: 'var(--primary)', verticalAlign: 'text-bottom' }} />
+                            {visit.property.title}
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><FiMapPin size={11} /> {visit.property.location || '—'}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 2, color: 'var(--primary)', fontWeight: 500 }}><FiDollarSign size={11} /> {visit.property.price || '—'}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>—</div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="appointment-badge">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#1e293b' }}>
+                          <FiCalendar size={13} style={{ color: 'var(--primary)' }} />
+                          {visit.preferredDate || '—'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                          <FiClock size={13} />
+                          {visit.preferredTime || '—'}
+                        </div>
                       </div>
                     </td>
-                    <td>
-                      <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }} title={enq.message}>
-                        {enq.message || '—'}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${getStatusColor(enq.status)}`}>{enq.status || 'Pending'}</span>
-                    </td>
-                    <td>
+                    <td onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button 
                           className="btn btn-ghost btn-icon" 
-                          style={{ color: 'var(--primary)', background: 'var(--primary-light)' }} 
-                          onClick={() => openView(enq)} 
-                          title="View Details & Notes"
-                        >
-                          <FiMessageSquare size={16} />
-                        </button>
-                        <button 
-                          className="btn btn-ghost btn-icon" 
                           style={{ color: 'var(--danger)', background: 'var(--danger-light)' }} 
-                          onClick={() => setDeleteId(enq.id)} 
-                          title="Delete"
+                          onClick={() => setDeleteId(visit.id)} 
+                          title="Delete Appointment"
                         >
                           <FiTrash2 size={16} />
                         </button>
                       </div>
                     </td>
                   </tr>
-                )})
+                ))
               )}
             </tbody>
           </table>
@@ -276,76 +229,70 @@ function EnquiriesList() {
           {loading ? (
             <div style={{ padding: 20 }}>
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="skeleton skeleton-card-item" style={{ height: 160, borderRadius: 12, marginBottom: 16 }} />
+                <div key={i} className="skeleton skeleton-card-item" style={{ height: 170, borderRadius: 12, marginBottom: 16 }} />
               ))}
             </div>
           ) : paginated.length === 0 ? (
             <div className="table-empty" style={{ padding: '36px 16px' }}>
-              <div className="table-empty-icon">📭</div>
-              <p style={{ fontWeight: 500 }}>No enquiries found</p>
+              <div className="table-empty-icon">📅</div>
+              <p style={{ fontWeight: 500 }}>No site visits found</p>
             </div>
           ) : (
             <div className="mobile-cards-list">
-              {paginated.map((enq, i) => {
-                const name = enq.fullName || enq.customerName || '—';
-                const mobile = enq.mobileNumber || enq.phone || '—';
-                const propertyTitle = enq.property?.title || enq.propertyTitle || null;
-
-                return (
-                <div key={enq.id} className="mobile-card">
+              {paginated.map((visit, i) => (
+                <div key={visit.id} className="mobile-card" onClick={() => setSelectedVisit(visit)}>
                   <div className="mobile-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="avatar-circle">{getInitials(name !== '—' ? name : '')}</div>
+                      <div className="avatar-circle-visit">{getInitials(visit.fullName)}</div>
                       <div>
-                        <h4>{name}</h4>
-                        <span>{enq.createdAt ? formatDate(enq.createdAt) : '—'}</span>
+                        <h4>{visit.fullName || '—'}</h4>
+                        <span>Scheduled: {visit.preferredDate || '—'}</span>
                       </div>
                     </div>
-                    <span className={`badge badge-${getStatusColor(enq.status)}`}>
-                      {enq.status || 'Pending'}
-                    </span>
                   </div>
 
                   <div className="mobile-card-body">
-                    {propertyTitle && (
+                    {visit.property && (
                       <div className="mobile-card-row">
                         <FiHome size={14} className="card-row-icon" />
                         <span className="card-row-label">Property:</span>
-                        <strong className="card-row-value">{propertyTitle}</strong>
+                        <strong className="card-row-value">{visit.property.title}</strong>
                       </div>
                     )}
                     <div className="mobile-card-row">
                       <FiPhone size={14} className="card-row-icon" />
                       <span className="card-row-label">Phone:</span>
-                      <a href={`tel:${mobile}`} className="card-row-link">{mobile}</a>
+                      <a href={`tel:${visit.mobileNumber}`} className="card-row-link" onClick={e => e.stopPropagation()}>{visit.mobileNumber || '—'}</a>
                     </div>
                     <div className="mobile-card-row">
                       <FiMail size={14} className="card-row-icon" />
                       <span className="card-row-label">Email:</span>
-                      <a href={`mailto:${enq.email}`} className="card-row-link">{enq.email || '—'}</a>
+                      <a href={`mailto:${visit.email}`} className="card-row-link" onClick={e => e.stopPropagation()}>{visit.email || '—'}</a>
                     </div>
-                    {enq.message && (
-                      <div className="card-msg-preview">
-                        <strong>Message:</strong>
-                        <p>{enq.message}</p>
+
+                    <div className="mobile-appointment-slot">
+                      <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-tertiary)', display: 'block', marginBottom: 2 }}>Preferred Timing slot</span>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <FiClock size={13} style={{ color: 'var(--primary)' }} />
+                        {visit.preferredTime || '—'} ({visit.preferredDate || '—'})
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="mobile-card-actions">
-                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => openView(enq)}>
-                      <FiMessageSquare size={14} /> Views & Notes
+                  <div className="mobile-card-actions" onClick={e => e.stopPropagation()}>
+                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => setSelectedVisit(visit)}>
+                      View Details
                     </button>
                     <button 
                       className="btn btn-danger btn-sm btn-icon" 
-                      onClick={() => setDeleteId(enq.id)}
+                      onClick={() => setDeleteId(visit.id)}
                       style={{ padding: '6px 12px', background: 'var(--danger-light)', color: 'var(--danger)', borderColor: 'transparent' }}
                     >
                       <FiTrash2 size={15} />
                     </button>
                   </div>
                 </div>
-              )})}
+              ))}
             </div>
           )}
         </div>
@@ -371,76 +318,91 @@ function EnquiriesList() {
         )}
       </div>
 
-      {/* View/Edit Details Modal */}
-      {viewEnq && (
-        <div className="modal-overlay" onClick={() => setViewEnq(null)}>
+      {/* Selected Visit Details Modal */}
+      {selectedVisit && (
+        <div className="modal-overlay" onClick={() => setSelectedVisit(null)}>
           <div className="modal modal-md" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Enquiry Details</h2>
-              <button className="modal-close" onClick={() => setViewEnq(null)}>✕</button>
+              <h2 className="modal-title">Site Visit Details</h2>
+              <button className="modal-close" onClick={() => setSelectedVisit(null)}>✕</button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Customer</span>
-                    <strong style={{ fontSize: '0.90rem', color: 'var(--text-primary)' }}>{viewEnq.fullName || viewEnq.customerName || '—'}</strong>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                
+                {/* Appointment time header box */}
+                <div style={{
+                  background: 'linear-gradient(135deg, var(--primary-light) 0%, #e0f2fe 100%)',
+                  padding: '20px',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(99, 102, 241, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16
+                }}>
+                  <div style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '12px',
+                    background: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(99, 102, 241, 0.12)'
+                  }}>
+                    <FiCalendar size={22} style={{ color: 'var(--primary)' }} />
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Contact Details</span>
-                    <div style={{ fontSize: '0.90rem' }}>
-                      <a href={`tel:${viewEnq.mobileNumber || viewEnq.phone}`} style={{ color: 'var(--primary)', fontWeight: 600, display: 'block' }}>{viewEnq.mobileNumber || viewEnq.phone || '—'}</a>
-                      <a href={`mailto:${viewEnq.email}`} style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.8rem' }}>{viewEnq.email || '—'}</a>
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Property Title</span>
-                    <strong style={{ fontSize: '0.90rem', color: 'var(--text-primary)' }}>{viewEnq.property?.title || viewEnq.propertyTitle || '—'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Submission Date</span>
-                    <span style={{ fontSize: '0.90rem', color: 'var(--text-primary)' }}>{viewEnq.createdAt ? formatDateTime(viewEnq.createdAt) : '—'}</span>
+                    <span style={{ fontSize: '0.72rem', fontStyle: 'normal', color: 'var(--primary-dark)', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600 }}>Scheduled Appointment</span>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '2px 0 0', color: 'var(--text-primary)' }}>
+                      {selectedVisit.preferredDate} at {selectedVisit.preferredTime}
+                    </h3>
                   </div>
                 </div>
 
-                {viewEnq.message && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Customer</span>
+                    <strong style={{ fontSize: '0.90rem', color: 'var(--text-primary)' }}>{selectedVisit.fullName || '—'}</strong>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Contact Details</span>
+                    <div style={{ fontSize: '0.90rem', marginTop: 2 }}>
+                      <a href={`tel:${selectedVisit.mobileNumber}`} style={{ color: 'var(--primary)', fontWeight: 600, display: 'block' }}>{selectedVisit.mobileNumber || '—'}</a>
+                      <a href={`mailto:${selectedVisit.email}`} style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.8rem' }}>{selectedVisit.email || '—'}</a>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedVisit.property && (
                   <div>
-                    <label style={{ fontWeight: 600, fontSize: '0.875rem', display: 'block', marginBottom: 6, color: 'var(--text-primary)' }}>Customer Message</label>
-                    <div style={{ background: '#f1f5f9', padding: 14, borderRadius: 10, fontSize: '0.875rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                      {viewEnq.message}
+                    <label style={{ fontWeight: 600, fontSize: '0.875rem', display: 'block', marginBottom: 6, color: 'var(--text-primary)' }}>Requested Property</label>
+                    <div style={{ background: '#f8fafc', padding: 14, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ fontSize: '0.90rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                        <FiHome size={14} style={{ marginRight: 6, color: 'var(--primary)', verticalAlign: 'text-bottom' }} />
+                        {selectedVisit.property.title}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 20 }}>
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <FiMapPin size={12} /> {selectedVisit.property.location || '—'}
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <FiDollarSign size={12} /> {selectedVisit.property.price || '—'}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
+                
+                {selectedVisit.createdAt && (
+                  <div style={{ fontSize: '0.73rem', color: 'var(--text-tertiary)', textAlign: 'right' }}>
+                    Record added: {formatDateTime(selectedVisit.createdAt)}
+                  </div>
+                )}
 
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 600 }}>Update Status</label>
-                  <select 
-                    className="form-control" 
-                    value={editStatus} 
-                    onChange={e => setEditStatus(e.target.value)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {STATUSES.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 600 }}>Internal Notes / Comments</label>
-                  <textarea 
-                    className="form-control" 
-                    rows={4} 
-                    value={notes} 
-                    onChange={e => setNotes(e.target.value)} 
-                    placeholder="Add notes about this customer's inquiry..." 
-                  />
-                </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setViewEnq(null)} disabled={saving}>Close</button>
-              <button className="btn btn-primary" onClick={handleSaveUpdate} disabled={saving}>
-                {saving ? 'Updating...' : 'Save Changes'}
-              </button>
+              <button className="btn btn-secondary w-full" onClick={() => setSelectedVisit(null)}>Close</button>
             </div>
           </div>
         </div>
@@ -448,8 +410,8 @@ function EnquiriesList() {
 
       {deleteId && (
         <ConfirmDialog
-          title="Delete Enquiry"
-          message="Are you sure you want to delete this enquiry? This action will permanently remove it from the database."
+          title="Delete Site Visit Record"
+          message="Are you sure you want to delete this site visit appointment? This will permanently erase the record from the database."
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
           loading={deleteLoading}
@@ -457,12 +419,12 @@ function EnquiriesList() {
       )}
 
       <style>{`
-        .avatar-circle {
+        .avatar-circle-visit {
           width: 38px;
           height: 38px;
           border-radius: 50%;
-          background: var(--primary-light);
-          color: var(--primary);
+          background: #e0f2fe;
+          color: #0369a1;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -471,6 +433,15 @@ function EnquiriesList() {
           flex-shrink: 0;
           box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
           border: 1.5px solid white;
+        }
+
+        .appointment-badge {
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 8px 12px;
+          display: inline-block;
+          font-size: 0.8125rem;
         }
 
         .desktop-only {
@@ -499,6 +470,7 @@ function EnquiriesList() {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          cursor: pointer;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
@@ -524,7 +496,11 @@ function EnquiriesList() {
 
         .mobile-card-header span {
           font-size: 0.75rem;
-          color: var(--text-tertiary);
+          color: var(--primary-dark);
+          background: var(--primary-light);
+          padding: 2px 8px;
+          border-radius: 20px;
+          font-weight: 500;
         }
 
         .mobile-card-body {
@@ -566,29 +542,12 @@ function EnquiriesList() {
           text-decoration: underline;
         }
 
-        .card-msg-preview {
-          background: #f8fafc;
+        .mobile-appointment-slot {
+          background: #f0fdfa;
           padding: 8px 12px;
           border-radius: 8px;
-          border: 1px solid #e2e8f0;
-          font-size: 0.775rem;
+          border: 1.5px solid #ccfbf1;
           margin-top: 4px;
-        }
-
-        .card-msg-preview strong {
-          color: var(--text-secondary);
-          display: block;
-          margin-bottom: 3px;
-        }
-
-        .card-msg-preview p {
-          color: var(--text-primary);
-          line-height: 1.5;
-          margin: 0;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
 
         .mobile-card-actions {
@@ -624,4 +583,4 @@ function EnquiriesList() {
   );
 }
 
-export default EnquiriesList;
+export default SiteVisitsList;

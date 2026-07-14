@@ -31,7 +31,16 @@ function StarRating({ rating, onChange }) {
   );
 }
 
-const defaultForm = { customerName: '', review: '', rating: 5, imageUrl: '' };
+const defaultForm = { 
+  customerName: '', 
+  review: '', 
+  rating: 5, 
+  imageUrl: '',
+  propertyPurchased: '',
+  isFeatured: true,
+  isActive: true,
+  displayOrder: 1
+};
 
 function TestimonialsList() {
   const [testimonials, setTestimonials] = useState([]);
@@ -50,7 +59,17 @@ function TestimonialsList() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      setTestimonials(await testimonialsService.getAll());
+      const data = await testimonialsService.getAll();
+      data.sort((a, b) => {
+        const orderA = a.displayOrder !== undefined ? a.displayOrder : 999;
+        const orderB = b.displayOrder !== undefined ? b.displayOrder : 999;
+        if (orderA !== orderB) return orderA - orderB;
+        
+        const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
+        const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      setTestimonials(data);
     } catch {
       toast.error('Failed to load testimonials');
     } finally {
@@ -71,7 +90,16 @@ function TestimonialsList() {
 
   const openEdit = (item) => {
     setEditItem(item);
-    setForm({ customerName: item.customerName || '', review: item.review || '', rating: item.rating || 5, imageUrl: item.imageUrl || '' });
+    setForm({ 
+      customerName: item.customerName || '', 
+      review: item.review || '', 
+      rating: item.rating || 5, 
+      imageUrl: item.imageUrl || '',
+      propertyPurchased: item.propertyPurchased || '',
+      isFeatured: item.isFeatured !== undefined ? item.isFeatured : true,
+      isActive: item.isActive !== undefined ? item.isActive : true,
+      displayOrder: item.displayOrder !== undefined ? item.displayOrder : 999
+    });
     setImageFile(null);
     setImagePreview(item.imageUrl || '');
     setErrors({});
@@ -170,7 +198,12 @@ function TestimonialsList() {
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 2 }}>{item.customerName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <div style={{ fontWeight: 700 }}>{item.customerName}</div>
+                    {item.isFeatured !== false && <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#dcfce7', color: '#166534', borderRadius: 10, fontWeight: 600 }}>Featured</span>}
+                    {item.isActive === false && <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#fee2e2', color: '#991b1b', borderRadius: 10, fontWeight: 600 }}>Inactive</span>}
+                  </div>
+                  {item.propertyPurchased && <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: 4 }}>{item.propertyPurchased}</div>}
                   <div style={{ color: '#f59e0b', fontSize: '0.875rem' }}>{'★'.repeat(item.rating || 5)}{'☆'.repeat(5 - (item.rating || 5))}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
@@ -179,7 +212,10 @@ function TestimonialsList() {
                 </div>
               </div>
               <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.7, fontStyle: 'italic' }}>"{item.review}"</p>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 10 }}>{formatDate(item.createdAt)}</div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+                <span>Order: {item.displayOrder !== undefined ? item.displayOrder : 999}</span>
+                <span>{formatDate(item.createdAt)}</span>
+              </div>
             </div>
           ))
         )}
@@ -231,6 +267,29 @@ function TestimonialsList() {
                   <label className="form-label required">Review</label>
                   <textarea className={`form-control ${errors.review ? 'error' : ''}`} rows={4} value={form.review} onChange={e => setForm(p => ({ ...p, review: e.target.value }))} placeholder="Customer's testimonial text..." />
                   {errors.review && <span className="form-error">{errors.review}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Property Purchased</label>
+                  <input className="form-control" value={form.propertyPurchased} onChange={e => setForm(p => ({ ...p, propertyPurchased: e.target.value }))} placeholder="e.g. 3 BHK Flat - Pragathi Nagar" />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Display Order</label>
+                  <input className="form-control" type="number" value={form.displayOrder} onChange={e => setForm(p => ({ ...p, displayOrder: Number(e.target.value) }))} />
+                </div>
+
+                <div style={{ display: 'flex', gap: 24, marginTop: 4 }}>
+                  <label className="toggle">
+                    <input type="checkbox" checked={form.isFeatured} onChange={e => setForm(p => ({ ...p, isFeatured: e.target.checked }))} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Featured</span>
+                  </label>
+                  <label className="toggle">
+                    <input type="checkbox" checked={form.isActive} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Active</span>
+                  </label>
                 </div>
               </div>
               <div className="modal-footer">

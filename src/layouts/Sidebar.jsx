@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import logo from '../assets/honestyrealtorlogo.png';
 import { useAuth } from '../contexts/AuthContext';
 import {
   FiGrid, FiHome, FiTag, FiMapPin, FiMessageSquare,
   FiStar, FiImage, FiUsers, FiSettings, FiLogOut,
-  FiChevronLeft, FiChevronRight,
+  FiChevronLeft, FiChevronRight, FiCalendar,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,7 @@ const navItems = [
   { label: 'Locations', icon: FiMapPin, path: '/locations' },
   { section: 'Engagement' },
   { label: 'Enquiries', icon: FiMessageSquare, path: '/enquiries', badge: 'enquiries' },
+  { label: 'Site Visits', icon: FiCalendar, path: '/site-visits' },
   { label: 'Testimonials', icon: FiStar, path: '/testimonials' },
   { label: 'Banners', icon: FiImage, path: '/banners' },
   { section: 'Admin' },
@@ -42,7 +44,7 @@ function Sidebar({ collapsed, setCollapsed, mobileOpen, pendingCount = 0 }) {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo__icon">HR</div>
+        <img src={logo} alt="Honesty Realtors Logo" style={{ width: 40, height: 40, objectFit: 'contain' }} />
         <div className="sidebar-logo__text">
           <h2>Honesty Realtors</h2>
           <p>Admin Dashboard</p>
@@ -90,24 +92,39 @@ function Sidebar({ collapsed, setCollapsed, mobileOpen, pendingCount = 0 }) {
           </div>
         )}
 
-        <button
-          className="sidebar-item"
-          onClick={handleLogout}
-          style={{ width: 'calc(100% - 16px)', margin: '0 8px', color: '#f87171' }}
-          title={collapsed ? 'Logout' : undefined}
-        >
-          <span className="sidebar-item__icon"><FiLogOut size={17} /></span>
-          <span className="sidebar-item__label">Logout</span>
-        </button>
-
-        <button
-          className="sidebar-toggle"
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ marginTop: 8 }}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <FiChevronRight size={16} /> : <FiChevronLeft size={16} />}
-        </button>
+        <div style={{ display: 'flex', flexDirection: collapsed ? 'column' : 'row', gap: 8, padding: '0 8px' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            title="Logout"
+            onMouseOver={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+            onMouseOut={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+          >
+            <FiLogOut size={16} />
+            {!collapsed && <span style={{ marginLeft: 8, fontSize: '0.875rem', fontWeight: 600 }}>Logout</span>}
+          </button>
+          
+          <button
+            className="sidebar-toggle"
+            onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{ padding: '8px' }}
+          >
+            {collapsed ? <FiChevronRight size={16} /> : <FiChevronLeft size={16} />}
+          </button>
+        </div>
       </div>
     </aside>
   );
