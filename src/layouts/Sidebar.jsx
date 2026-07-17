@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../assets/honestyrealtorlogo.png';
 import { useAuth } from '../contexts/AuthContext';
 import {
   FiGrid, FiHome, FiTag, FiMapPin, FiMessageSquare,
   FiStar, FiImage, FiUsers, FiSettings, FiLogOut,
-  FiChevronLeft, FiChevronRight, FiCalendar,
+  FiChevronLeft, FiChevronRight, FiCalendar, FiX,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -26,7 +25,7 @@ const navItems = [
   { label: 'Settings', icon: FiSettings, path: '/settings' },
 ];
 
-function Sidebar({ collapsed, setCollapsed, mobileOpen, pendingCount = 0 }) {
+function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen, pendingCount = 0 }) {
   const { logout, adminData } = useAuth();
   const navigate = useNavigate();
 
@@ -40,8 +39,24 @@ function Sidebar({ collapsed, setCollapsed, mobileOpen, pendingCount = 0 }) {
     }
   };
 
+  const handleNavClick = () => {
+    // Close mobile sidebar on navigation
+    if (mobileOpen && setMobileOpen) {
+      setMobileOpen(false);
+    }
+  };
+
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+      {/* Mobile close button */}
+      <button
+        className="sidebar-mobile-close"
+        onClick={() => setMobileOpen && setMobileOpen(false)}
+        aria-label="Close sidebar"
+      >
+        <FiX size={20} />
+      </button>
+
       {/* Logo */}
       <div className="sidebar-logo">
         <img src={logo} alt="Honesty Realtors Logo" style={{ width: 40, height: 40, objectFit: 'contain' }} />
@@ -68,6 +83,7 @@ function Sidebar({ collapsed, setCollapsed, mobileOpen, pendingCount = 0 }) {
               end={item.path === '/'}
               className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
               title={collapsed ? item.label : undefined}
+              onClick={handleNavClick}
             >
               <span className="sidebar-item__icon">
                 <Icon size={17} />

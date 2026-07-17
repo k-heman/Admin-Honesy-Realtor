@@ -226,7 +226,8 @@ function PropertiesList() {
           </div>
         )}
 
-        <div className="table-scroll">
+        {/* Desktop Table */}
+        <div className="table-scroll desktop-table">
           <table>
             <thead>
               <tr>
@@ -317,6 +318,79 @@ function PropertiesList() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Property Cards */}
+        <div className="mobile-table-cards">
+          {loading ? (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 140, borderRadius: 12 }} />
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <div className="table-empty">
+              <div className="table-empty-icon">🏘️</div>
+              <p>{search || filterType || filterStatus ? 'No properties match your filters' : 'No properties yet. Add your first one!'}</p>
+            </div>
+          ) : (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {paginated.map(prop => (
+                <div key={prop.id} className="mobile-property-card">
+                  <div className="mobile-property-card__top">
+                    {(prop.images?.[0] || prop.image) ? (
+                      <img src={prop.images?.[0] || prop.image} alt={prop.title} className="mobile-property-card__thumb" />
+                    ) : (
+                      <div className="mobile-property-card__thumb-placeholder">🏠</div>
+                    )}
+                    <div className="mobile-property-card__info">
+                      <div className="mobile-property-card__title">{prop.title}</div>
+                      <div className="mobile-property-card__meta">
+                        <span className="badge badge-secondary">{prop.type}</span>
+                        <span className={`badge badge-${getStatusColor(prop.status)}`} style={{ textTransform: 'capitalize' }}>
+                          {prop.status || 'available'}
+                        </span>
+                        {prop.isFeatured && <span className="badge badge-warning">⭐ Featured</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mobile-property-card__detail-grid">
+                    <div className="mobile-property-card__detail-item">
+                      💰 <strong>
+                        {typeof prop.priceValue === 'number' && prop.priceValue > 0
+                          ? formatCurrency(prop.priceValue)
+                          : prop.price || '—'}
+                      </strong>
+                    </div>
+                    <div className="mobile-property-card__detail-item">
+                      📍 {prop.location || '—'}
+                    </div>
+                    {prop.bhk && (
+                      <div className="mobile-property-card__detail-item">
+                        🏗️ {prop.bhk}
+                      </div>
+                    )}
+                    <div className="mobile-property-card__detail-item">
+                      📅 {formatDate(prop.createdAt)}
+                    </div>
+                  </div>
+
+                  <div className="mobile-property-card__actions">
+                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => setViewProp(prop)}>
+                      <FiEye size={14} /> View
+                    </button>
+                    <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => { setEditProp(prop); setShowForm(true); }}>
+                      <FiEdit2 size={14} /> Edit
+                    </button>
+                    <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444', background: '#fee2e2', borderColor: 'transparent' }} onClick={() => setDeleteId(prop.id)}>
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Pagination */}

@@ -124,7 +124,8 @@ function CategoriesList() {
       </div>
 
       <div className="table-wrapper">
-        <div className="table-scroll">
+        {/* Desktop Table */}
+        <div className="table-scroll desktop-table">
           <table>
             <thead>
               <tr>
@@ -174,6 +175,48 @@ function CategoriesList() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="mobile-table-cards">
+          {loading ? (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 80, borderRadius: 12 }} />
+              ))}
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="table-empty"><div className="table-empty-icon">🏷️</div><p>No categories yet</p></div>
+          ) : (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {categories.map((cat) => (
+                <div key={cat.id} className="mobile-simple-card">
+                  <div className="mobile-simple-card__header">
+                    <div className="mobile-simple-card__title">{cat.name}</div>
+                    <button
+                      onClick={() => toggleStatus(cat)}
+                      className={`badge ${cat.status === 'active' ? 'badge-success' : 'badge-secondary'}`}
+                      style={{ cursor: 'pointer', border: 'none' }}
+                    >
+                      {cat.status === 'active' ? '✓ Active' : '✗ Inactive'}
+                    </button>
+                  </div>
+                  <div className="mobile-simple-card__row">
+                    <label>Created</label>
+                    <span>{formatDate(cat.createdAt)}</span>
+                  </div>
+                  <div className="mobile-simple-card__actions">
+                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => openEdit(cat)}>
+                      <FiEdit2 size={14} /> Edit
+                    </button>
+                    <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444', background: '#fee2e2', borderColor: 'transparent' }} onClick={() => setDeleteId(cat.id)}>
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiMenu, FiBell, FiExternalLink } from 'react-icons/fi';
+import { FiMenu, FiExternalLink } from 'react-icons/fi';
 
 const pageMap = {
   '/': 'Dashboard',
@@ -32,19 +32,15 @@ function Header({ onMenuToggle }) {
       <div className="admin-header__left">
         <button
           onClick={onMenuToggle}
-          className="btn btn-ghost btn-icon"
-          style={{ display: 'none' }}
+          className="btn btn-ghost btn-icon mobile-menu-btn"
           aria-label="Toggle menu"
           id="mobile-menu-btn"
         >
           <FiMenu size={20} />
         </button>
-        <style>{`
-          @media (max-width: 768px) { #mobile-menu-btn { display: flex !important; } }
-        `}</style>
 
         <div className="breadcrumb">
-          <span>Honesty Realtors</span>
+          <span className="breadcrumb__home">Honesty Realtors</span>
           <span className="breadcrumb__separator">/</span>
           <span className="breadcrumb__current">{pageName}</span>
         </div>
@@ -55,18 +51,17 @@ function Header({ onMenuToggle }) {
           href="https://honestyrealtor.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary btn-sm header-view-site-btn"
           title="View public website"
         >
           <FiExternalLink size={14} />
-          View Website
+          <span className="header-view-site-label">View Website</span>
         </a>
 
-        <div className="header-user-info" style={{ display: 'none' }}>
+        <div className="header-user-info">
           <div className="header-user-info__name">{adminData?.name || adminData?.fullName || 'Admin'}</div>
           <div className="header-user-info__role">{adminData?.role || 'Admin'}</div>
         </div>
-        <style>{`@media (min-width: 640px) { .header-user-info { display: block !important; } }`}</style>
 
         <div 
           className="header-avatar" 

@@ -115,7 +115,8 @@ function LocationsList() {
       </div>
 
       <div className="table-wrapper">
-        <div className="table-scroll">
+        {/* Desktop Table */}
+        <div className="table-scroll desktop-table">
           <table>
             <thead>
               <tr>
@@ -161,6 +162,52 @@ function LocationsList() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="mobile-table-cards">
+          {loading ? (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 80, borderRadius: 12 }} />
+              ))}
+            </div>
+          ) : locations.length === 0 ? (
+            <div className="table-empty"><div className="table-empty-icon">📍</div><p>No locations yet</p></div>
+          ) : (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {locations.map((loc) => (
+                <div key={loc.id} className="mobile-simple-card">
+                  <div className="mobile-simple-card__header">
+                    <div className="mobile-simple-card__title">📍 {loc.locationName}</div>
+                    <button
+                      onClick={() => toggleStatus(loc)}
+                      className={`badge ${loc.status === 'active' ? 'badge-success' : 'badge-secondary'}`}
+                      style={{ cursor: 'pointer', border: 'none' }}
+                    >
+                      {loc.status === 'active' ? '✓ Active' : '✗ Inactive'}
+                    </button>
+                  </div>
+                  <div className="mobile-simple-card__row">
+                    <label>City</label>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{loc.city}</span>
+                  </div>
+                  <div className="mobile-simple-card__row">
+                    <label>Created</label>
+                    <span>{formatDate(loc.createdAt)}</span>
+                  </div>
+                  <div className="mobile-simple-card__actions">
+                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => openEdit(loc)}>
+                      <FiEdit2 size={14} /> Edit
+                    </button>
+                    <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444', background: '#fee2e2', borderColor: 'transparent' }} onClick={() => setDeleteId(loc.id)}>
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

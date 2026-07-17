@@ -206,7 +206,8 @@ function UsersList() {
           </div>
         </div>
 
-        <div className="table-scroll">
+        {/* Desktop Table */}
+        <div className="table-scroll desktop-table">
           <table>
             <thead>
               <tr>
@@ -303,6 +304,67 @@ function UsersList() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="mobile-table-cards">
+          {loading ? (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 100, borderRadius: 12 }} />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="table-empty">
+              <div className="table-empty-icon">👥</div>
+              <p>No admin users found</p>
+            </div>
+          ) : (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {filtered.map((user) => (
+                <div key={user.id} className="mobile-user-card" style={{ opacity: user.status === 'inactive' ? 0.6 : 1 }}>
+                  <div className="mobile-user-card__top">
+                    <div className="mobile-user-card__avatar">
+                      {(user.name || 'A')[0].toUpperCase()}
+                    </div>
+                    <div className="mobile-user-card__details">
+                      <div className="mobile-user-card__name">
+                        {user.name}
+                        {user.mobileNumber === currentUser?.phoneNumber && (
+                          <span style={{ fontSize: '0.7rem', color: '#6366f1', fontWeight: 600, marginLeft: 6 }}>You</span>
+                        )}
+                      </div>
+                      <div className="mobile-user-card__phone">{user.mobileNumber}</div>
+                    </div>
+                  </div>
+                  <div className="mobile-simple-card__row">
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span className={`badge badge-${getStatusColor(user.role)}`}>{user.role}</span>
+                      <button
+                        onClick={() => toggleStatus(user)}
+                        className={`badge ${user.status === 'active' ? 'badge-success' : 'badge-secondary'}`}
+                        style={{ cursor: 'pointer', border: 'none' }}
+                        disabled={user.mobileNumber === currentUser?.phoneNumber}
+                      >
+                        {user.status === 'active' ? '✓ Active' : '✗ Inactive'}
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{formatDate(user.createdAt)}</span>
+                  </div>
+                  <div className="mobile-simple-card__actions">
+                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => openEdit(user)}>
+                      <FiEdit2 size={14} /> Edit
+                    </button>
+                    {user.mobileNumber !== currentUser?.phoneNumber && (
+                      <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444', background: '#fee2e2', borderColor: 'transparent' }} onClick={() => setDeleteId(user.id)}>
+                        <FiTrash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

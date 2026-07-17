@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { enquiriesService } from '../services/firestoreService';
@@ -8,6 +8,7 @@ function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const location = useLocation();
 
   useEffect(() => {
     // Fetch pending enquiries count for badge
@@ -21,27 +22,38 @@ function DashboardLayout() {
     fetchPending();
   }, []);
 
-  const handleMobileToggle = () => setMobileOpen(!mobileOpen);
+  // Auto-close sidebar on route change (mobile)
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  const handleMobileToggle = useCallback(() => setMobileOpen(prev => !prev), []);
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   return (
     <div className="admin-layout">
       {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-            zIndex: 99, display: 'none'
-          }}
-          id="mobile-overlay"
-        />
-      )}
-      <style>{`@media (max-width: 768px) { #mobile-overlay { display: block !important; } }`}</style>
+      <div
+        className={`mobile-sidebar-overlay ${mobileOpen ? 'active' : ''}`}
+        onClick={closeMobile}
+        aria-hidden="true"
+      />
 
       <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
         mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
         pendingCount={pendingCount}
       />
 

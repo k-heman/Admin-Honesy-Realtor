@@ -155,7 +155,8 @@ function BannersList() {
         <button className="btn btn-primary" onClick={openAdd}><FiPlus size={16} /> Add Banner</button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Desktop Banner List */}
+      <div className="desktop-table" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', height: 120 }}>
@@ -174,21 +175,17 @@ function BannersList() {
         ) : (
           [...banners].sort((a, b) => (a.priority || 0) - (b.priority || 0)).map((banner, idx, arr) => (
             <div key={banner.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
-              {/* Image */}
               <div style={{ width: 200, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
                 <img src={banner.imageUrl} alt={banner.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', top: 8, left: 8, background: '#0f172a', color: 'white', borderRadius: 6, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700 }}>
                   #{banner.priority || idx + 1}
                 </div>
               </div>
-
-              {/* Content */}
               <div style={{ flex: 1, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>{banner.title}</div>
                   <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>{formatDate(banner.createdAt)}</div>
                 </div>
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
                     onClick={() => toggleActive(banner)}
@@ -197,8 +194,6 @@ function BannersList() {
                   >
                     {banner.isActive !== false ? '✓ Active' : '✗ Inactive'}
                   </button>
-
-                  {/* Priority Controls */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <button className="btn btn-ghost btn-icon" style={{ padding: 4 }} onClick={() => movePriority(banner, 'up')} disabled={idx === 0} title="Move up">
                       <FiArrowUp size={14} />
@@ -207,13 +202,63 @@ function BannersList() {
                       <FiArrowDown size={14} />
                     </button>
                   </div>
-
                   <button className="btn btn-ghost btn-icon" onClick={() => openEdit(banner)} title="Edit"><FiEdit2 size={16} /></button>
                   <button className="btn btn-ghost btn-icon" style={{ color: '#ef4444' }} onClick={() => setDeleteId(banner.id)} title="Delete"><FiTrash2 size={16} /></button>
                 </div>
               </div>
             </div>
           ))
+        )}
+      </div>
+
+      {/* Mobile Banner Cards */}
+      <div className="mobile-table-cards">
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: 200, borderRadius: 12 }} />
+            ))}
+          </div>
+        ) : banners.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: 48 }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🖼️</div>
+            <p style={{ color: '#64748b' }}>No banners yet. Add your first hero banner!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[...banners].sort((a, b) => (a.priority || 0) - (b.priority || 0)).map((banner, idx, arr) => (
+              <div key={banner.id} className="mobile-banner-card">
+                <div style={{ position: 'relative' }}>
+                  <img src={banner.imageUrl} alt={banner.title} className="mobile-banner-card__image" />
+                  <div style={{ position: 'absolute', top: 8, left: 8, background: '#0f172a', color: 'white', borderRadius: 6, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700 }}>
+                    #{banner.priority || idx + 1}
+                  </div>
+                </div>
+                <div className="mobile-banner-card__body">
+                  <div className="mobile-banner-card__title">{banner.title}</div>
+                  <div className="mobile-banner-card__meta">
+                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{formatDate(banner.createdAt)}</span>
+                    <button
+                      onClick={() => toggleActive(banner)}
+                      className={`badge ${banner.isActive !== false ? 'badge-success' : 'badge-secondary'}`}
+                      style={{ cursor: 'pointer', border: 'none' }}
+                    >
+                      {banner.isActive !== false ? '✓ Active' : '✗ Inactive'}
+                    </button>
+                  </div>
+                  <div className="mobile-banner-card__actions">
+                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => movePriority(banner, 'up')} disabled={idx === 0}><FiArrowUp size={14} /></button>
+                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => movePriority(banner, 'down')} disabled={idx === arr.length - 1}><FiArrowDown size={14} /></button>
+                    <div style={{ flex: 1 }} />
+                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(banner)}><FiEdit2 size={14} /> Edit</button>
+                    <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444', background: '#fee2e2', borderColor: 'transparent' }} onClick={() => setDeleteId(banner.id)}>
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
