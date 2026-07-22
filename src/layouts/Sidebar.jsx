@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import logo from '../assets/honestyrealtorlogo.png';
+import logo from '../assets/honestylogo.jpeg';
 import { useAuth } from '../contexts/AuthContext';
 import {
   FiGrid, FiHome, FiTag, FiMapPin, FiMessageSquare,
