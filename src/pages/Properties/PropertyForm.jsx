@@ -312,7 +312,7 @@ function PropertyForm({ property, onClose, onSuccess }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 24, marginTop: 14 }}>
+          <div className="mobile-toggle-stack" style={{ display: 'flex', gap: 24, marginTop: 14 }}>
             <label className="toggle">
               <input type="checkbox" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} />
               <span className="toggle-track"><span className="toggle-thumb" /></span>

@@ -320,12 +320,12 @@ function PropertiesList() {
           </table>
         </div>
 
-        {/* Mobile Property Cards */}
+        {/* Mobile Property Cards — Premium Redesign */}
         <div className="mobile-table-cards">
           {loading ? (
-            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="mobile-property-cards-container">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="skeleton" style={{ height: 140, borderRadius: 12 }} />
+                <div key={i} className="skeleton" style={{ height: 280, borderRadius: 16 }} />
               ))}
             </div>
           ) : paginated.length === 0 ? (
@@ -334,58 +334,70 @@ function PropertiesList() {
               <p>{search || filterType || filterStatus ? 'No properties match your filters' : 'No properties yet. Add your first one!'}</p>
             </div>
           ) : (
-            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="mobile-property-cards-container">
               {paginated.map(prop => (
                 <div key={prop.id} className="mobile-property-card">
-                  <div className="mobile-property-card__top">
+                  {/* Image Section with Overlay Badges */}
+                  <div className="mobile-property-card__image-section">
                     {(prop.images?.[0] || prop.image) ? (
-                      <img src={prop.images?.[0] || prop.image} alt={prop.title} className="mobile-property-card__thumb" />
+                      <img src={prop.images?.[0] || prop.image} alt={prop.title} className="mobile-property-card__image" />
                     ) : (
-                      <div className="mobile-property-card__thumb-placeholder">🏠</div>
+                      <div className="mobile-property-card__image-placeholder">🏠</div>
                     )}
-                    <div className="mobile-property-card__info">
-                      <div className="mobile-property-card__title">{prop.title}</div>
-                      <div className="mobile-property-card__meta">
-                        <span className="badge badge-secondary">{prop.type}</span>
-                        <span className={`badge badge-${getStatusColor(prop.status)}`} style={{ textTransform: 'capitalize' }}>
-                          {prop.status || 'available'}
-                        </span>
-                        {prop.isFeatured && <span className="badge badge-warning">⭐ Featured</span>}
-                      </div>
+                    <div className="mobile-property-card__badges">
+                      <span className={`badge badge-${getStatusColor(prop.status)}`} style={{ textTransform: 'capitalize' }}>
+                        {prop.status || 'available'}
+                      </span>
+                      {prop.isFeatured && <span className="badge badge-warning">⭐ Featured</span>}
+                      {prop.isNew && <span className="badge badge-info">🆕 New</span>}
                     </div>
+                    <div className="mobile-property-card__price-tag">
+                      {typeof prop.priceValue === 'number' && prop.priceValue > 0
+                        ? formatCurrency(prop.priceValue)
+                        : prop.price || '—'}
+                    </div>
+                    <button className="mobile-property-card__select-btn" onClick={() => toggleSelect(prop.id)}>
+                      {selected.includes(prop.id) ? <FiCheckSquare size={18} color="#6366f1" /> : <FiSquare size={18} color="#94a3b8" />}
+                    </button>
                   </div>
 
-                  <div className="mobile-property-card__detail-grid">
-                    <div className="mobile-property-card__detail-item">
-                      💰 <strong>
-                        {typeof prop.priceValue === 'number' && prop.priceValue > 0
-                          ? formatCurrency(prop.priceValue)
-                          : prop.price || '—'}
-                      </strong>
-                    </div>
-                    <div className="mobile-property-card__detail-item">
-                      📍 {prop.location || '—'}
-                    </div>
-                    {prop.bhk && (
-                      <div className="mobile-property-card__detail-item">
-                        🏗️ {prop.bhk}
-                      </div>
+                  {/* Card Body */}
+                  <div className="mobile-property-card__body">
+                    <div className="mobile-property-card__title">{prop.title}</div>
+                    {prop.location && (
+                      <div className="mobile-property-card__subtitle">📍 {prop.location}</div>
                     )}
-                    <div className="mobile-property-card__detail-item">
-                      📅 {formatDate(prop.createdAt)}
-                    </div>
-                  </div>
 
-                  <div className="mobile-property-card__actions">
-                    <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => setViewProp(prop)}>
-                      <FiEye size={14} /> View
-                    </button>
-                    <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => { setEditProp(prop); setShowForm(true); }}>
-                      <FiEdit2 size={14} /> Edit
-                    </button>
-                    <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444', background: '#fee2e2', borderColor: 'transparent' }} onClick={() => setDeleteId(prop.id)}>
-                      <FiTrash2 size={14} />
-                    </button>
+                    {/* Detail Rows */}
+                    <div className="mobile-property-card__details">
+                      <div className="mobile-property-card__detail-row">
+                        <span className="mobile-property-card__detail-label">🏷️ Type</span>
+                        <span className="mobile-property-card__detail-value">{prop.type || '—'}</span>
+                      </div>
+                      {prop.bhk && (
+                        <div className="mobile-property-card__detail-row">
+                          <span className="mobile-property-card__detail-label">🏗️ Config</span>
+                          <span className="mobile-property-card__detail-value">{prop.bhk}</span>
+                        </div>
+                      )}
+                      <div className="mobile-property-card__detail-row">
+                        <span className="mobile-property-card__detail-label">📅 Added</span>
+                        <span className="mobile-property-card__detail-value">{formatDate(prop.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mobile-property-card__actions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => setViewProp(prop)}>
+                        <FiEye size={15} /> View
+                      </button>
+                      <button className="btn btn-primary btn-sm" onClick={() => { setEditProp(prop); setShowForm(true); }}>
+                        <FiEdit2 size={15} /> Edit
+                      </button>
+                      <button className="mobile-card-delete-btn" title="Delete" onClick={() => setDeleteId(prop.id)}>
+                        <FiTrash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -446,13 +458,13 @@ function PropertiesList() {
             </div>
             <div className="modal-body">
               {viewProp.images?.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20 }}>
+                <div className="mobile-view-images" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20 }}>
                   {viewProp.images.map((img, i) => (
                     <img key={i} src={img} alt={`Image ${i + 1}`} style={{ height: 160, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
                   ))}
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="mobile-view-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {[
                   ['Title', viewProp.title],
                   ['Type', viewProp.type],
@@ -478,7 +490,7 @@ function PropertiesList() {
               {viewProp.description && (
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>Description</div>
-                  <div style={{ color: '#64748b', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: viewProp.description }} />
+                  <div style={{ color: '#64748b', lineHeight: 1.7, wordWrap: 'break-word', overflowWrap: 'break-word' }} dangerouslySetInnerHTML={{ __html: viewProp.description }} />
                 </div>
               )}
               {viewProp.amenities?.length > 0 && (
